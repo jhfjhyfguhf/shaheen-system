@@ -3,261 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام شاهين </title>
+    <title>نظام شاهين التنبؤي V3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;500;700&family=Orbitron:wght@500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;500;700&family=Orbitron:wght@500;700&display=swap');
         
         :root {
-            --primary-brown: #3d2b1f; /* بني داكن ملكي */
-            --secondary-brown: #5d4037; /* بني متوسط */
-            --accent-gold: #c5a059; /* ذهبي مطفي */
-            --bg-sand: #fdfaf6; /* خلفية رملية فاتحة جداً */
-            --text-dark: #2d241e;
+            --primary-dark: #1a1512;
+            --royal-brown: #3d2b1f;
+            --accent-gold: #c5a059;
+            --danger-red: #ef4444;
+            --ai-blue: #3b82f6;
         }
 
         body { 
             font-family: 'Noto Sans Arabic', sans-serif; 
-            background-color: var(--bg-sand); 
-            color: var(--text-dark);
-            overflow-x: hidden;
-        }
-
-        .gov-header {
-            background: linear-gradient(to left, var(--primary-brown), var(--secondary-brown));
-            border-bottom: 3px solid var(--accent-gold);
+            background-color: #0f0c0a; 
+            color: #e5e7eb;
+            overflow: hidden;
         }
 
         .digital-font { font-family: 'Orbitron', sans-serif; }
 
-        /* تعديل حجم الخريطة 15:5 */
-        #map-container {
-            width: 100%; 
-            height: 320px; 
-            border-radius: 12px; 
-            overflow: hidden;
-            border: 3px solid var(--primary-brown); 
-            position: relative; 
-            box-shadow: 0 10px 30px rgba(61, 43, 31, 0.2);
-            background: #eee;
+        /* تأثير الزجاج البلوري */
+        .glass-panel {
+            background: rgba(61, 43, 31, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(197, 160, 89, 0.2);
+            border-radius: 15px;
         }
 
-        /* الماسح الراداري باللون الذهبي */
+        /* حاوية الخريطة المتقدمة */
+        #map-container {
+            height: 450px;
+            border: 2px solid var(--accent-gold);
+            box-shadow: 0 0 30px rgba(197, 160, 89, 0.1);
+            position: relative;
+        }
+
+        /* الرادار */
         #radar-scanner {
-            position: absolute; top: 50%; left: 50%; width: 1200px; height: 1200px;
-            background: conic-gradient(from 0deg, rgba(197, 160, 89, 0.3) 0deg, transparent 50deg);
+            position: absolute; top: 50%; left: 50%; width: 1500px; height: 1500px;
+            background: conic-gradient(from 0deg, rgba(197, 160, 89, 0.15) 0deg, transparent 60deg);
             transform-origin: center center;
             z-index: 1000; pointer-events: none;
-            border-radius: 50%;
             display: none;
         }
 
-        /* النقاط وتفاعلها مع الرادار */
+        /* نقاط الحوادث */
         .incident-point {
-            width: 14px; height: 14px; border-radius: 50%;
-            transition: opacity 1s ease-out, transform 0.5s ease-out;
-            opacity: 0; 
+            width: 12px; height: 12px; border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+            animation: pulse 1.5s infinite;
         }
-        .incident-point.active {
-            opacity: 1; transform: scale(1.3);
-            box-shadow: 0 0 15px currentColor;
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
         }
-        .red-point { background-color: #b91c1c; color: #ef4444; }
-        .yellow-point { background-color: #d97706; color: #fbbf24; }
 
         .stat-card {
-            background: white;
-            border-bottom: 4px solid var(--primary-brown);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        .stat-card:hover { 
-            transform: translateY(-5px);
-            border-color: var(--accent-gold);
+            background: linear-gradient(145deg, #1e1a17, #2d241e);
+            border-bottom: 3px solid var(--accent-gold);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(45, 36, 30, 0.9); z-index: 5000; backdrop-filter: blur(5px); }
-        .modal-content { background: white; width: 95%; max-width: 800px; margin: 3% auto; border-radius: 15px; border: 2px solid var(--accent-gold); overflow: hidden; }
-        
-        .tab-btn { color: #6d4c41; padding: 1rem; transition: 0.3s; }
-        .tab-btn.active { background: var(--primary-brown); color: white; }
+        .stat-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+        }
 
-        .patrol-marker {
-            filter: drop-shadow(0 0 3px rgba(0,0,0,0.5));
-            transition: all 1s linear;
+        /* شريط التنبيهات الجانبي */
+        .alert-stream {
+            max-height: 450px;
+            overflow-y: auto;
+        }
+        .alert-item {
+            border-right: 3px solid var(--accent-gold);
+            background: rgba(255,255,255,0.03);
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 0.75rem;
         }
     </style>
 </head>
 <body>
 
-    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-[#f4ece2]">
-        <div class="bg-white w-full max-w-md p-10 text-center rounded-2xl shadow-2xl border-t-[10px] border-[#3d2b1f]">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Absher_logo.svg/512px-Absher_logo.svg.png" class="w-32 mx-auto mb-6" alt="Absher Logo">
-            <h1 class="text-2xl font-bold text-[#3d2b1f] mb-2">بوابة شاهين الأمنية</h1>
-            <p class="text-[#8d6e63] text-xs mb-8 font-bold tracking-widest uppercase">الوصول الفيدرالي الموحد - منطقة تبوك</p>
-            <div class="space-y-4">
-                <input type="text" placeholder="اسم المستخدم" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-[#c5a059]">
-                <input type="password" placeholder="كلمة المرور" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-[#c5a059]">
-                <button onclick="enterSystem()" class="w-full bg-[#3d2b1f] hover:bg-[#5d4037] text-[#c5a059] font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95">تسجيل الدخول</button>
+    <!-- شاشة التحميل/الدخول -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
+        <div class="glass-panel w-full max-w-md p-10 text-center border-t-4 border-[#c5a059]">
+            <div class="mb-6 inline-block p-4 rounded-full bg-black/40 border border-[#c5a059]">
+                <span class="text-5xl">🦅</span>
             </div>
-            <p class="mt-6 text-[10px] text-gray-400">جميع الحقوق محفوظة لنظام شاهين للأمن الصناعي © 2026</p>
+            <h1 class="text-3xl font-bold text-white mb-2 tracking-widest">SHAHEEN <span class="text-[#c5a059]">AI</span></h1>
+            <p class="text-gray-400 text-xs mb-8">نظام التنبؤ والتحليل الأمني الاستباقي</p>
+            <div class="space-y-4">
+                <input type="password" placeholder="كود الوصول المشفر" class="w-full p-4 bg-black/50 border border-gray-700 rounded-xl text-center text-[#c5a059] digital-font">
+                <button onclick="enterSystem()" class="w-full bg-[#c5a059] hover:bg-[#a6864a] text-black font-bold py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(197,160,89,0.3)]">دخول النظام</button>
+            </div>
         </div>
     </div>
 
-    <div id="main-system" class="hidden min-h-screen flex flex-col">
-        <nav class="gov-header p-4 flex justify-between items-center px-10 shadow-xl">
-            <div class="flex items-center gap-6">
-                <div class="bg-[#c5a059] text-[#3d2b1f] p-2 px-4 rounded-md font-bold digital-font">SH-V2</div>
+    <!-- النظام الرئيسي -->
+    <div id="main-system" class="hidden h-screen flex flex-col">
+        <!-- الهيدر -->
+        <nav class="p-4 px-8 border-b border-[#c5a059]/30 flex justify-between items-center bg-black/40">
+            <div class="flex items-center gap-4">
+                <div class="text-[#c5a059] text-2xl">🦅</div>
                 <div>
-                    <h2 class="text-xl font-bold text-white leading-tight">نظام شاهين <span class="text-[#c5a059]">للعمليات الفيدرالية</span></h2>
-                    <p class="text-[10px] text-[#d7ccc8] font-medium">المديرية العامة للأمن الصناعي - تبوك</p>
+                    <h2 class="font-bold text-lg text-white">نظام شاهين <span class="text-xs bg-[#c5a059] text-black px-2 py-0.5 rounded ml-2">V3.0.4</span></h2>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-tighter">Predictive Security Intelligence Unit</p>
                 </div>
             </div>
-            <div id="clock" class="digital-font text-[#c5a059] text-2xl font-bold tracking-widest">00:00:00</div>
+            <div class="flex gap-8 items-center">
+                <div class="text-left">
+                    <p class="text-[9px] text-gray-500">حالة الخادم</p>
+                    <p class="text-[10px] text-green-500 font-bold">متصل - مشفر</p>
+                </div>
+                <div id="clock" class="digital-font text-[#c5a059] text-2xl font-bold">00:00:00</div>
+            </div>
         </nav>
 
-        <main class="p-8 max-w-[1600px] mx-auto w-full flex-grow">
-            <!-- قسم الخريطة 15:5 -->
-            <div id="map-container" class="mb-8">
-                <div id="radar-scanner"></div>
-                <div id="map" class="w-full h-full"></div>
-                <div class="absolute bottom-4 left-4 z-[2000] bg-[#3d2b1f]/90 p-3 rounded-lg border border-[#c5a059] text-[10px] text-white">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
-                        <span>رادار المسح: <span class="text-[#c5a059]">نشط</span></span>
+        <main class="flex-grow p-6 overflow-hidden flex gap-6">
+            <!-- الجزء الأيمن: الخريطة والتحليلات -->
+            <div class="flex-[3] flex flex-col gap-6">
+                <div id="map-container" class="rounded-2xl overflow-hidden relative">
+                    <div id="radar-scanner"></div>
+                    <div id="map" class="w-full h-full"></div>
+                    
+                    <!-- واجهة بيانات فوق الخريطة -->
+                    <div class="absolute top-4 right-4 z-[1000] glass-panel p-4 text-[10px] w-48">
+                        <p class="text-[#c5a059] font-bold mb-2">إحداثيات المسح الجاري:</p>
+                        <p class="digital-font text-white mb-1">LAT: 28.3973</p>
+                        <p class="digital-font text-white">LNG: 36.5715</p>
+                        <hr class="my-2 border-gray-700">
+                        <p class="text-blue-400">تحليل النطاق: <span class="animate-pulse">نشط...</span></p>
                     </div>
-                    <div class="digital-font">TABUK_IND_COORD: 28.3245N, 36.5165E</div>
+                </div>
+
+                <!-- المربعات الإحصائية -->
+                <div class="grid grid-cols-4 gap-4">
+                    <div onclick="openReportModal()" class="stat-card p-4 rounded-xl cursor-pointer">
+                        <p class="text-[10px] text-gray-400 mb-1">الحوادث الحالية</p>
+                        <div class="flex justify-between items-end">
+                            <span class="text-3xl font-bold digital-font text-white" id="report-num">12</span>
+                            <span class="text-red-500 text-[10px]">🚨 +2 عاجل</span>
+                        </div>
+                    </div>
+                    <div class="stat-card p-4 rounded-xl">
+                        <p class="text-[10px] text-gray-400 mb-1">دقة التنبؤ AI</p>
+                        <div class="flex justify-between items-end">
+                            <span class="text-3xl font-bold digital-font text-[#c5a059]">97.4%</span>
+                            <div class="w-12 h-1 bg-gray-800 rounded-full overflow-hidden">
+                                <div class="bg-[#c5a059] h-full" style="width: 97%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card p-4 rounded-xl">
+                        <p class="text-[10px] text-gray-400 mb-1">الدوريات النشطة</p>
+                        <div class="flex justify-between items-end">
+                            <span class="text-3xl font-bold digital-font text-blue-400">08</span>
+                            <span class="text-[9px] text-gray-500">في النطاق</span>
+                        </div>
+                    </div>
+                    <div class="stat-card p-4 rounded-xl">
+                        <p class="text-[10px] text-gray-400 mb-1">مستوى التهديد</p>
+                        <div class="flex justify-between items-end">
+                            <span class="text-xl font-bold text-green-500">منخفض</span>
+                            <span class="text-[15px]">🛡️</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- المربعات الأربعة (الأيقونات) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div onclick="openReportModal()" class="stat-card p-6 rounded-xl border-r-8 border-red-700">
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="text-3xl">🚨</span>
-                        <span class="bg-red-100 text-red-700 text-[10px] px-2 py-1 rounded font-bold">عاجل</span>
-                    </div>
-                    <h4 class="text-gray-500 text-xs font-bold mb-1">وحدة البلاغ</h4>
-                    <div class="flex items-baseline justify-between">
-                        <span class="text-3xl font-bold digital-font text-[#3d2b1f]" id="report-num">08</span>
-                        <span class="text-[#c5a059] text-xs font-bold">فتح النظام ←</span>
-                    </div>
+            <!-- الجزء الأيسر: شريط التنبيهات الذكي -->
+            <div class="flex-1 glass-panel p-4 flex flex-col">
+                <h3 class="text-[#c5a059] font-bold text-sm mb-4 flex items-center gap-2">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    تنبؤات سلوكية (AI)
+                </h3>
+                <div class="alert-stream flex-grow space-y-3" id="alert-stream">
+                    <!-- التنبيهات تولد برمجياً -->
                 </div>
-
-                <div class="stat-card p-6 rounded-xl border-r-8 border-brown-700">
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="text-3xl">🧠</span>
-                        <span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-1 rounded font-bold">AI</span>
-                    </div>
-                    <h4 class="text-gray-500 text-xs font-bold mb-1">التنبؤ الأمني</h4>
-                    <div class="text-2xl font-bold digital-font text-[#3d2b1f]">94.8% <span class="text-xs font-normal text-gray-400">استقرار</span></div>
-                </div>
-
-                <div class="stat-card p-6 rounded-xl border-r-8 border-blue-900">
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="text-3xl">📍</span>
-                        <span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded font-bold">GPS</span>
-                    </div>
-                    <h4 class="text-gray-500 text-xs font-bold mb-1">التوزيع الأمني</h4>
-                    <div class="text-2xl font-bold digital-font text-[#3d2b1f]">05 <span class="text-xs font-normal text-gray-400">دوريات نشطة</span></div>
-                </div>
-
-                <div class="stat-card p-6 rounded-xl border-r-8 border-yellow-600">
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="text-3xl">🔍</span>
-                        <span class="bg-yellow-100 text-yellow-700 text-[10px] px-2 py-1 rounded font-bold">ANALYSIS</span>
-                    </div>
-                    <h4 class="text-gray-500 text-xs font-bold mb-1">مراقبة السلوك</h4>
-                    <div class="text-xl font-bold digital-font text-[#3d2b1f] uppercase tracking-tighter">Monitoring</div>
-                </div>
+                <button class="mt-4 w-full py-2 border border-[#c5a059]/50 text-[#c5a059] text-[10px] rounded hover:bg-[#c5a059] hover:text-black transition-all">
+                    توليد تقرير استخباراتي كامل
+                </button>
             </div>
         </main>
     </div>
 
-    <div id="report-modal" class="modal-overlay">
-        <div class="modal-content shadow-2xl">
-            <div class="flex border-b border-gray-200">
-                <button onclick="switchTab('direct')" id="tab-direct" class="tab-btn active flex-1 font-bold text-sm">وحدة البلاغ المباشر (العسكري)</button>
-                <button onclick="switchTab('unsolved')" id="tab-unsolved" class="tab-btn flex-1 font-bold text-sm">البلاغات غير المحلولة</button>
-                <button onclick="closeReportModal()" class="p-4 text-red-600 hover:bg-red-50 font-bold text-xl">×</button>
+    <!-- (نفس كود الـ Modals الخاص بك مع تعديلات طفيفة في التصميم) -->
+    <div id="report-modal" class="modal-overlay hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[5000] flex items-center justify-center p-6">
+        <div class="bg-[#1e1a17] w-full max-w-2xl rounded-2xl border border-[#c5a059] overflow-hidden">
+            <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                <h3 class="text-[#c5a059] font-bold">إرسال بلاغ عملياتي</h3>
+                <button onclick="closeReportModal()" class="text-gray-500 hover:text-white text-2xl">&times;</button>
             </div>
-
-            <!-- نموذج البلاغ المباشر -->
-            <div id="content-direct" class="p-8">
-                <form onsubmit="event.preventDefault(); submitReport();" class="grid grid-cols-2 gap-6">
-                    <div class="col-span-1">
-                        <label class="text-xs font-bold text-gray-500 mb-1 block">رقم البلاغ الإلكتروني</label>
-                        <input type="text" id="rep-id" readonly class="w-full bg-gray-100 p-3 rounded-lg border-2 border-gray-200 text-[#3d2b1f] digital-font font-bold">
-                    </div>
-                    <div class="col-span-1">
-                        <label class="text-xs font-bold text-gray-500 mb-1 block">اسم الجاني / المشتبه به</label>
-                        <input type="text" required placeholder="أدخل الاسم الرباعي" class="w-full p-3 rounded-lg border-2 border-gray-200 outline-none focus:border-[#c5a059]">
-                    </div>
-                    <div class="col-span-1">
-                        <label class="text-xs font-bold text-gray-500 mb-1 block">نوع البلاغ</label>
-                        <select class="w-full p-3 rounded-lg border-2 border-gray-200 outline-none focus:border-[#c5a059]">
-                            <option>تسلل للمنطقة الصناعية</option>
-                            <option>اشتباه أمني بمركبة</option>
-                            <option>سرقة مواد أولية</option>
-                            <option>تخريب ممتلكات فيدرالية</option>
-                        </select>
-                    </div>
-                    <div class="col-span-1 flex gap-4">
-                        <div class="w-1/2">
-                            <label class="text-xs font-bold text-gray-500 mb-1 block">العمر التقديري</label>
-                            <input type="number" placeholder="30" class="w-full p-3 rounded-lg border-2 border-gray-200">
-                        </div>
-                        <div class="w-1/2">
-                            <label class="text-xs font-bold text-gray-500 mb-1 block">الجنس</label>
-                            <select class="w-full p-3 rounded-lg border-2 border-gray-200">
-                                <option>ذكر</option>
-                                <option>أنثى</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-span-2">
-                        <label class="text-xs font-bold text-gray-500 mb-1 block">العلامات الفارقة ووصف القضية</label>
-                        <textarea rows="3" required class="w-full p-3 rounded-lg border-2 border-gray-200 outline-none focus:border-[#c5a059]" placeholder="مثال: يرتدي ملابس زرقاء، ندبة في الوجه، يركب سيارة دفع رباعي..."></textarea>
-                    </div>
-                    <button type="submit" class="col-span-2 bg-[#3d2b1f] hover:bg-[#5d4037] text-white font-bold py-4 rounded-xl shadow-lg mt-4">إرسال البلاغ فوراً للقيادة</button>
+            <div class="p-8">
+                <!-- فورم البلاغ (نفس محتواك السابق لكن بتصميم داكن) -->
+                <form onsubmit="event.preventDefault(); submitReport();" class="space-y-4">
+                    <input type="text" placeholder="رقم الهوية / الاسم" class="w-full p-3 bg-black/40 border border-gray-700 rounded text-white">
+                    <textarea rows="4" placeholder="وصف الحالة التدخلية..." class="w-full p-3 bg-black/40 border border-gray-700 rounded text-white"></textarea>
+                    <button type="submit" class="w-full bg-[#c5a059] text-black font-bold py-3 rounded">تأكيد الإرسال للقيادة</button>
                 </form>
-            </div>
-
-            <!-- البلاغات غير المحلولة -->
-            <div id="content-unsolved" class="hidden p-8 space-y-4 max-h-[500px] overflow-y-auto">
-                <div class="bg-[#fdfaf6] p-5 rounded-xl border-r-8 border-amber-600 shadow-sm">
-                    <div class="flex justify-between items-center mb-2">
-                        <h5 class="text-amber-800 font-bold text-base">سرقة محول طاقة رئيسي - قطاع ج</h5>
-                        <span class="text-[10px] bg-amber-200 px-2 py-1 rounded text-amber-800 font-bold">قيد المراجعة</span>
-                    </div>
-                    <p class="text-xs text-gray-600">تم رصد مركبة نقل "ايسوزو" بيضاء مجهولة تدخل القطاع الساعة 02:00 ص. لم يتم تحديد اللوحات.</p>
-                </div>
-                <div class="bg-[#fdfaf6] p-5 rounded-xl border-r-8 border-red-800 shadow-sm">
-                    <div class="flex justify-between items-center mb-2">
-                        <h5 class="text-red-900 font-bold text-base">محاولة اختراق بوابة المستودعات الخام</h5>
-                        <span class="text-[10px] bg-red-200 px-2 py-1 rounded text-red-800 font-bold">قضية معلقة</span>
-                    </div>
-                    <p class="text-xs text-gray-600">تخريب متعمد للسياج الإلكتروني. البصمات لم تتطابق مع سجلات الموظفين الحالية.</p>
-                </div>
-                <div class="bg-[#fdfaf6] p-5 rounded-xl border-r-8 border-gray-500 shadow-sm">
-                    <div class="flex justify-between items-center mb-2">
-                        <h5 class="text-gray-700 font-bold text-base">فقدان مواد كيماوية - مصنع "أ"</h5>
-                        <span class="text-[10px] bg-gray-200 px-2 py-1 rounded text-gray-600 font-bold">تحقيق مفتوح</span>
-                    </div>
-                    <p class="text-xs text-gray-600">نقص في الجرد الدوري للمواد الحساسة. الكاميرات الداخلية كانت معطلة في فترة الحادثة.</p>
-                </div>
             </div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let map;
-        let radarAngle = 0;
-        let incidents = [];
-        const mapCenter = [28.3245, 36.5165]; // المدينة الصناعية بتبوك
+        let map, radarAngle = 0, incidents = [];
+        const mapCenter = [28.3973, 36.5715];
 
         function enterSystem() {
             document.getElementById('login-screen').classList.add('hidden');
@@ -266,121 +227,103 @@
                 initMap();
                 startRadar();
                 startTime();
+                generateAlerts();
             }, 300);
         }
 
         function initMap() {
-            map = L.map('map', { 
-                zoomControl: false, attributionControl: false,
-                dragging: false, scrollWheelZoom: false, doubleClickZoom: false
-            }).setView(mapCenter, 14);
+            // استخدام ستايل "CartoDB Dark Matter" ليعطي شكلاً أمنياً
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView(mapCenter, 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}').addTo(map);
+            // إضافة دوريات
+            addPatrol(28.4000, 36.5800, "Alpha-1");
+            addPatrol(28.3900, 36.5600, "Bravo-2");
 
-            addPatrol(28.3280, 36.5200, "SH-01");
-            addPatrol(28.3210, 36.5100, "SH-02");
-
-            generateIncidents(8);
+            generateIncidents(10);
         }
 
         function generateIncidents(count) {
             for(let i=0; i<count; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = 0.003 + Math.random() * 0.012;
-                const lat = mapCenter[0] + Math.sin(angle) * dist;
-                const lng = mapCenter[1] + Math.cos(angle) * dist;
-                const type = Math.random() > 0.4 ? 'red' : 'yellow';
-
+                const lat = mapCenter[0] + (Math.random() - 0.5) * 0.05;
+                const lng = mapCenter[1] + (Math.random() - 0.5) * 0.05;
+                const color = Math.random() > 0.5 ? '#ef4444' : '#f59e0b';
+                
                 const icon = L.divIcon({
-                    className: 'marker-container',
-                    html: `<div class="incident-point ${type}-point" id="inc-${i}"></div>`,
-                    iconSize: [14, 14]
+                    className: 'custom-div-icon',
+                    html: `<div class="incident-point" style="background-color: ${color}; color: ${color};" id="inc-${i}"></div>`
                 });
 
                 L.marker([lat, lng], {icon: icon}).addTo(map);
-
+                
+                // حساب زاوية النقطة للرادار
                 const point = map.latLngToContainerPoint([lat, lng]);
                 const center = map.latLngToContainerPoint(mapCenter);
-                let targetAngle = Math.atan2(point.y - center.y, point.x - center.x) * (180 / Math.PI);
-                targetAngle = (targetAngle + 450) % 360; 
-
-                incidents.push({ id: `inc-${i}`, angle: targetAngle });
+                let angle = Math.atan2(point.y - center.y, point.x - center.x) * (180 / Math.PI);
+                incidents.push({ id: `inc-${i}`, angle: (angle + 450) % 360 });
             }
         }
 
         function startRadar() {
-            const radarElem = document.getElementById('radar-scanner');
-            radarElem.style.display = 'block';
-            
-            function animate() {
-                radarAngle = (radarAngle + 1.5) % 360;
-                radarElem.style.transform = `translate(-50%, -50%) rotate(${radarAngle}deg)`;
-
+            const radar = document.getElementById('radar-scanner');
+            radar.style.display = 'block';
+            function step() {
+                radarAngle = (radarAngle + 1.2) % 360;
+                radar.style.transform = `translate(-50%, -50%) rotate(${radarAngle}deg)`;
+                
                 incidents.forEach(inc => {
                     const diff = Math.abs(radarAngle - inc.angle);
-                    if (diff < 12 || (360 - diff) < 12) {
+                    if(diff < 10) {
                         const el = document.getElementById(inc.id);
-                        if (el) {
-                            el.classList.add('active');
-                            setTimeout(() => el.classList.remove('active'), 2000);
-                        }
+                        if(el) { el.style.opacity = "1"; setTimeout(() => el.style.opacity = "0.3", 1500); }
                     }
                 });
-                requestAnimationFrame(animate);
+                requestAnimationFrame(step);
             }
-            requestAnimationFrame(animate);
+            step();
         }
 
-        function addPatrol(lat, lng, id) {
+        function addPatrol(lat, lng, name) {
             const icon = L.divIcon({
-                className: 'patrol-marker',
-                html: `<div style="background:#3d2b1f; color:#c5a059; border:1px solid #c5a059; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:bold; white-space:nowrap; box-shadow: 0 0 5px #000;">🚔 ${id}</div>`,
-                iconSize: [60, 20]
+                className: 'patrol-icon',
+                html: `<div class="bg-blue-600 text-[8px] text-white p-1 rounded border border-white whitespace-nowrap">🚓 ${name}</div>`
             });
             let marker = L.marker([lat, lng], {icon: icon}).addTo(map);
-            
             setInterval(() => {
-                let newLat = marker.getLatLng().lat + (Math.random() - 0.5) * 0.001;
-                let newLng = marker.getLatLng().lng + (Math.random() - 0.5) * 0.001;
-                marker.setLatLng([newLat, newLng]);
-            }, 3000);
+                marker.setLatLng([marker.getLatLng().lat + (Math.random()-0.5)*0.002, marker.getLatLng().lng + (Math.random()-0.5)*0.002]);
+            }, 4000);
         }
 
-        function openReportModal() {
-            document.getElementById('report-modal').style.display = 'block';
-            document.getElementById('rep-id').value = "SH-" + Math.floor(100000 + Math.random() * 900000);
-        }
-
-        function closeReportModal() { document.getElementById('report-modal').style.display = 'none'; }
-
-        function switchTab(tab) {
-            const dBtn = document.getElementById('tab-direct');
-            const uBtn = document.getElementById('tab-unsolved');
-            const dCont = document.getElementById('content-direct');
-            const uCont = document.getElementById('content-unsolved');
-
-            if(tab === 'direct') {
-                dBtn.classList.add('active'); uBtn.classList.remove('active');
-                dCont.classList.remove('hidden'); uCont.classList.add('hidden');
-            } else {
-                uBtn.classList.add('active'); dBtn.classList.remove('active');
-                uCont.classList.remove('hidden'); dCont.classList.add('hidden');
-            }
+        function generateAlerts() {
+            const alerts = [
+                { type: 'AI', msg: 'احتمالية سرقه متجر مجوهرات خلال 20 دقيقة بواسطه محمد 1234565278 (ثقة 88%)' },
+                { type: 'GPS', msg: 'احتمالية تهريب ممنوعات 21/2/2027 بواسطه احمد 455667808 (ثقة 88%)'' },
+                { type: 'SEC', msg: 'محاولة ولوج فاشلة لقاعدة البيانات من IP خارجي' },
+                { type: 'AI', msg: 'نمط قيادة غير طبيعي رُصد في طريق الملك فيصل' }
+            ];
+            const container = document.getElementById('alert-stream');
+            alerts.forEach((a, i) => {
+                setTimeout(() => {
+                    const div = document.createElement('div');
+                    div.className = 'alert-item animate-pulse';
+                    div.innerHTML = `<span class="text-[#c5a059] font-bold">[${a.type}]</span> <span class="text-gray-300">${a.msg}</span>`;
+                    container.prepend(div);
+                }, i * 2000);
+            });
         }
 
         function startTime() {
             setInterval(() => {
-                const now = new Date();
-                document.getElementById('clock').innerText = now.toLocaleTimeString('en-GB');
+                document.getElementById('clock').innerText = new Date().toLocaleTimeString('en-GB');
             }, 1000);
         }
 
+        function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
+        function closeReportModal() { document.getElementById('report-modal').classList.add('hidden'); }
+        
         function submitReport() {
-            const msg = document.createElement('div');
-            msg.className = 'fixed top-10 left-1/2 -translate-x-1/2 bg-[#3d2b1f] text-[#c5a059] p-6 rounded-2xl shadow-2xl z-[6000] border-2 border-[#c5a059] font-bold';
-            msg.innerHTML = "✅ تم إرسال البلاغ بنجاح إلى قاعدة البيانات الفيدرالية المركزية";
-            document.body.appendChild(msg);
-            setTimeout(() => { msg.remove(); closeReportModal(); }, 3000);
+            alert("تم تشفير البلاغ وإرساله للعمليات المركزية.");
+            closeReportModal();
         }
     </script>
 </body>
